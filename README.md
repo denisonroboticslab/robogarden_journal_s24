@@ -19,3 +19,10 @@ Summary:
 Partially assembled HERO and found the calibration error. Assembling is blocked due to the cloud server issue at the Bambu end and calibration testing is in progress.
 Notes:
 Advance calibration for tomorrow and finalizing input shaper. Also, complete the assembly by printing the rest of the part.
+
+5/15/24
+
+Summary: 
+Stopped the calibration and completed the assembling HERO. I started working on the Modification of the HERO as the project required. 
+Notes:
+Complete the Base Design and read the rest of the paper.

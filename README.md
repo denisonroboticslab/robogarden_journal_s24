@@ -25,4 +25,11 @@ Advance calibration for tomorrow and finalizing input shaper. Also, complete the
 Summary: 
 Stopped the calibration and completed the assembling HERO. I started working on the Modification of the HERO as the project required. 
 Notes:
-Complete the Base Design and read the rest of the paper.
+completing the Base Design and reading the rest of the paper?
+
+5/16/24
+
+Summary: 
+The base design is completed and the paper reading is done. 
+Notes:
+Design the moter stand and base for the rotatory motion.

@@ -1,10 +1,10 @@
 import time
 from dynamixel_python import DynamixelManager
 
-USB_PORT = 'COM3'
+USB_PORT = '/dev/ttyUSB0'
 BAUD_RATE = 1000000
-DYNAMIXEL_MODEL = 'mx-28-2'
-ID = 1
+DYNAMIXEL_MODEL = 'mx-106-2'
+ID = 3
 
 def single_motor_example():
     """
@@ -23,14 +23,14 @@ def single_motor_example():
     testMotor.set_torque_enable(True)
     testMotor.set_profile_velocity(2500)
 
-    for i in range(10):
-        testMotor.set_goal_position(0)
+    for i in range(3):
+        testMotor.set_goal_position()
         print("moving")
         time.sleep(2)
         
-        testMotor.set_goal_position(600)
-        print("moving")
-        time.sleep(2)
+        # testMotor.set_goal_position(600)
+        # print("moving")
+        # time.sleep(2)
 
     testMotor.set_torque_enable(False)
     testMotor.set_led(False)

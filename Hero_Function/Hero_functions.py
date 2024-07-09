@@ -152,19 +152,17 @@ class MyRobot:
         print(f"Angle between L6 and L5: {angle_L6_L5} degrees")
 
         # Calculate Db using the law of cosines
-        cos_angle_Db = (self.L1**2 + self.L2**2 - self.L3**2) / (2 * self.L1 * self.L2)
-        angle_Db = np.arccos(np.clip(cos_angle_Db, -1.0, 1.0))
-        print(f"Angle Db: {np.degrees(angle_Db)} degrees")
+        Db = np.sqrt(self.L5**2 + self.L6**2 - 2 * self.L5 * self.L6 * np.cos(angle_L6_L5))
+        print(f"Db: {Db}")
 
         # Calculate β using the law of cosines
-        cos_beta = (self.L1**2 + self.L2**2 - self.L3**2) / (2 * self.L1 * self.L2)
+        cos_beta = (self.L1**2 + self.L2**2 - Db**2) / (2 * self.L1 * self.L2)
         beta = np.arccos(np.clip(cos_beta, -1.0, 1.0))
         print(f"β: {np.degrees(beta)} degrees")
 
         # Calculate α1
         alpha_1 = 90 - np.degrees(beta)
         print(f"α1: {alpha_1} degrees")
-
         return alpha_0, alpha_1
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import time
+import numpy as np
 from dynamixel_python import DynamixelManager
 
 class MyRobot:
@@ -114,8 +115,60 @@ class MyRobot:
             return max_limit
         else:
             return angle
+    
+    def planner_ik(self, x, y):
+        """
+        Inverse kinematics to find the angles α0 and α1 based on end-effector position (x, y)
+        :param x: X position of the end-effector
+        :param y: Y position of the end-effector
+        :return: Tuple of angles (α0, α1)
+        """
+        print(f"Running planner_ik with end-effector position: ({x}, {y})")
+
+        # Calculate hypotenuse r
+        r = np.sqrt(x**2 + y**2)
+        print(f"Hypotenuse (r): {r}")
+
+        # Calculate angle phi using the alternate angle
+        phi = np.arctan2(y, x)
+        print(f"Phi: {np.degrees(phi)} degrees")
+
+        # Calculate the angle between L5 and r using the law of cosines
+        cos_angle_L5_r = (self.L5**2 + r**2 - self.L7**2) / (2 * self.L5 * r)
+        angle_L5_r = np.arccos(np.clip(cos_angle_L5_r, -1.0, 1.0))
+        print(f"Angle between L5 and r: {np.degrees(angle_L5_r)} degrees")
+
+        # Calculate α0
+        alpha_0 = np.degrees(np.pi/2 - (angle_L5_r - phi))
+        print(f"α0: {alpha_0} degrees")
+
+        # Calculate the angle between L5 and L7 using the law of cosines
+        cos_angle_L5_L7 = (self.L5**2 + self.L7**2 - r**2) / (2 * self.L5 * self.L7)
+        angle_L5_L7 = np.arccos(np.clip(cos_angle_L5_L7, -1.0, 1.0))
+        print(f"Angle between L5 and L7: {np.degrees(angle_L5_L7)} degrees")
+
+        # Calculate the angle between L6 and L5
+        angle_L6_L5 = np.degrees(np.pi - angle_L5_L7)
+        print(f"Angle between L6 and L5: {angle_L6_L5} degrees")
+
+        # Calculate Db using the law of cosines
+        cos_angle_Db = (self.L1**2 + self.L2**2 - self.L3**2) / (2 * self.L1 * self.L2)
+        angle_Db = np.arccos(np.clip(cos_angle_Db, -1.0, 1.0))
+        print(f"Angle Db: {np.degrees(angle_Db)} degrees")
+
+        # Calculate β using the law of cosines
+        cos_beta = (self.L1**2 + self.L2**2 - self.L3**2) / (2 * self.L1 * self.L2)
+        beta = np.arccos(np.clip(cos_beta, -1.0, 1.0))
+        print(f"β: {np.degrees(beta)} degrees")
+
+        # Calculate α1
+        alpha_1 = 90 - np.degrees(beta)
+        print(f"α1: {alpha_1} degrees")
+
+        return alpha_0, alpha_1
 
 if __name__ == '__main__':
+    '''
     robot = MyRobot()
     robot.test()
     time.sleep(2)  # Adjust the sleep time if needed
@@ -123,3 +176,9 @@ if __name__ == '__main__':
     time.sleep(2)  # Adjust the sleep time if needed
     new_positions = {'base': 45, 'elbow': 20, 'shoulder': -10}
     robot.set_joint_angles(new_positions)
+    '''
+
+    # Test planner_ik function
+    x, y = 288.38, 45
+    alpha_0, alpha_1 = robot.planner_ik(x, y)
+    print(f"Calculated angles: α0 = {alpha_0} degrees, α1 = {alpha_1} degrees")

@@ -143,4 +143,4 @@ class DynamixelManager(object):
         for motor in self.dxl_dict.values():
             func(motor)
 
-
+    

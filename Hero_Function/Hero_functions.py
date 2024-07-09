@@ -25,12 +25,28 @@ class MyRobot:
         'shoulder': 2658,
     }
 
+    # Define offset positions for each motor
+    OFFSET_POSITIONS = {
+        'base': 2534,
+        'elbow': 3970,
+        'shoulder': 3212,
+    }
+
+    # Define link lengths
+    L1 = 65
+    L2 = 155
+    L3 = 54.4 + 160
+    L4 = 90.52
+    L5 = 148.4
+    L6 = 54.4
+    L7 = 160
+
     def __init__(self):
         """
         Set up and initialize motors according to MOTOR_LIST
         """
         # Set your list of motors formatted as (<human readable name>, <configured id>, <model>)
-        self.motor_list = [('base', 1, self.DYNAMIXEL_MODEL_B), ('elbow' , 2, self.DYNAMIXEL_MODEL_A), ('shoulder', 3, self.DYNAMIXEL_MODEL_A)]
+        self.motor_list = [('base', 1, self.DYNAMIXEL_MODEL_B), ('elbow', 2, self.DYNAMIXEL_MODEL_A), ('shoulder', 3, self.DYNAMIXEL_MODEL_A)]
 
         # Define goal positions for each motor
         self.goal_positions = {
@@ -61,8 +77,8 @@ class MyRobot:
             time.sleep(0.2)
         # Enable motor control
         self.motors.enable_all()
+        #self.disable_motor('elbow')
         self.motors.for_all(lambda motor: motor.set_profile_velocity(2500))
-
 
     def go_home(self):
         """
@@ -79,26 +95,82 @@ class MyRobot:
         :param positions: Dictionary with motor names as keys and target positions as values
         """
         for dxl_name, position in positions.items():  # positions are in degrees
-            offset = self.HOME_POSITIONS[dxl_name]
-            steps = self.deg2steps(position, offset=offset)
-            thresholded_pos = self.trim_angle(steps, dxl_name)
-            self.motors[dxl_name].set_goal_position(thresholded_pos)
+            if dxl_name == 'base':
+                steps = self.deg2stepsbase(position)
+            elif dxl_name == 'elbow':
+                steps = self.deg2stepelbow(position)
+            elif dxl_name == 'shoulder':
+                steps = self.deg2stepshoulder(position)
+            else:
+                continue
+
+            self.motors[dxl_name].set_goal_position(steps)
         time.sleep(1.5)  # Adjust the sleep time as needed for motors to reach the target positions
     
-    def deg2steps(self, angle_degrees, resolution=4096, offset=0):
+    def deg2steps(self, angle_degrees, resolution=4096):
         """
         Converts angle_degrees to steps in resolution.
         
         :param angle_degrees: The angle in degrees to convert.
         :param resolution: The resolution of the motor, default is 4096.
-        :param offset: An optional offset to add to the steps, default is 0.
-        :return: The equivalent steps for the given angle, considering the resolution and offset.
+        :return: The equivalent steps for the given angle.
         """
         # Convert angle degrees to steps
         steps = int((angle_degrees / 360.0) * resolution)
-        # Add the offset and wrap around using modulo operation
-        result = (steps + offset) % resolution
-        return result
+        return steps
+
+    def deg2stepsbase(self, angle_degrees_base, resolution=4096):
+        """
+        Converts base angle to steps.
+        
+        :param angle_degrees_base: The base angle in degrees to convert.
+        :param resolution: The resolution of the motor, default is 4096.
+        :return: The equivalent steps for the given angle.
+        """
+        steps_base = self.deg2steps(angle_degrees_base)
+        result_base = (steps_base + self.OFFSET_POSITIONS["base"]) % resolution
+        thresholded_pos_base = self.trim_angle(result_base, "base")
+        return thresholded_pos_base
+
+    def deg2stepelbow(self, angle_degrees_elbow, resolution=4096):
+        """
+        Converts elbow angle to steps.
+        
+        :param angle_degrees_elbow: The elbow angle in degrees to convert.
+        :param resolution: The resolution of the motor, default is 4096.
+        :return: The equivalent steps for the given angle.
+        """
+        steps_elbow = self.deg2steps(angle_degrees_elbow)
+        result_elbow = (self.OFFSET_POSITIONS["elbow"] - steps_elbow) % resolution
+        thresholded_pos_elbow = self.trim_angle(result_elbow, "elbow")
+        return thresholded_pos_elbow
+
+    def deg2stepshoulder(self, angle_degrees_shoulder, resolution=4096):
+        """
+        Converts shoulder angle to steps.
+        
+        :param angle_degrees_shoulder: The shoulder angle in degrees to convert.
+        :param resolution: The resolution of the motor, default is 4096.
+        :return: The equivalent steps for the given angle.
+        """
+        steps_shoulder = self.deg2steps(angle_degrees_shoulder)
+        result_shoulder = (self.OFFSET_POSITIONS["shoulder"] - steps_shoulder) % resolution
+        thresholded_pos_shoulder = self.trim_angle(result_shoulder, "shoulder")
+        return thresholded_pos_shoulder
+
+    def disable_motor(self, motor_name):
+        if motor_name in self.motors.dxl_dict:
+            self.motors[motor_name].set_torque_enable(False)
+        else:
+            # terminate here to prevent damage if motor failed to disable
+            raise ValueError(f"Failed to disable motor {motor_name}")
+
+    def enable_motor(self, motor_name):
+        if motor_name in self.motors.dxl_dict:
+            self.motors[motor_name].set_torque_enable(True)
+        else:
+            # terminate here to prevent damage if motor failed to enable
+            raise ValueError(f"Failed to enable motor {motor_name}")
 
     def trim_angle(self, angle, joint):
         """
@@ -121,7 +193,7 @@ class MyRobot:
         Inverse kinematics to find the angles α0 and α1 based on end-effector position (x, y)
         :param x: X position of the end-effector
         :param y: Y position of the end-effector
-        :return: Tuple of angles (α0, α1)
+        :return: Tuple of angles (α0, α1) in degrees
         """
         print(f"Running planner_ik with end-effector position: ({x}, {y})")
 
@@ -142,14 +214,14 @@ class MyRobot:
         alpha_0 = np.degrees(np.pi/2 - (angle_L5_r - phi))
         print(f"α0: {alpha_0} degrees")
 
-        # Calculate the angle between L5 and L7 using the law of cosines
+        # Calculate the anglebetween L5 and L7 using the law of cosines
         cos_angle_L5_L7 = (self.L5**2 + self.L7**2 - r**2) / (2 * self.L5 * self.L7)
         angle_L5_L7 = np.arccos(np.clip(cos_angle_L5_L7, -1.0, 1.0))
         print(f"Angle between L5 and L7: {np.degrees(angle_L5_L7)} degrees")
 
         # Calculate the angle between L6 and L5
-        angle_L6_L5 = np.degrees(np.pi - angle_L5_L7)
-        print(f"Angle between L6 and L5: {angle_L6_L5} degrees")
+        angle_L6_L5 = np.pi - angle_L5_L7
+        print(f"Angle between L6 and L5: {np.degrees(angle_L6_L5)} degrees")
 
         # Calculate Db using the law of cosines
         Db = np.sqrt(self.L5**2 + self.L6**2 - 2 * self.L5 * self.L6 * np.cos(angle_L6_L5))
@@ -163,20 +235,42 @@ class MyRobot:
         # Calculate α1
         alpha_1 = 90 - np.degrees(beta)
         print(f"α1: {alpha_1} degrees")
+
         return alpha_0, alpha_1
 
+    def base_ik(self, x, y):
+        """
+        Inverse kinematics to find the base angle based on end-effector position (x, y)
+        :param x: X position of the end-effector
+        :param y: Y position of the end-effector
+        :return: Base angle in degrees
+        """
+        print(f"Running base_ik with end-effector position: ({x}, {y})")
+
+        # Calculate base angle using arctan of x and y
+        base_angle = np.degrees(np.arctan2(y, x))
+        print(f"Base angle: {base_angle} degrees")
+
+
+
 if __name__ == '__main__':
-    '''
     robot = MyRobot()
     robot.test()
     time.sleep(2)  # Adjust the sleep time if needed
     robot.go_home()
     time.sleep(2)  # Adjust the sleep time if needed
-    new_positions = {'base': 45, 'elbow': 20, 'shoulder': -10}
-    robot.set_joint_angles(new_positions)
-    '''
-
-    # Test planner_ik function
-    x, y = 288.38, 45
+    
+    # Define end-effector position
+    x, y = 200, 80
+    
+    # Calculate angles using inverse kinematics
     alpha_0, alpha_1 = robot.planner_ik(x, y)
     print(f"Calculated angles: α0 = {alpha_0} degrees, α1 = {alpha_1} degrees")
+    
+    # Set joint angles based on calculated angles
+    new_positions = {
+        'base': 0,
+        'shoulder': 0,
+        'elbow': 90
+    }
+    robot.set_joint_angles(new_positions)

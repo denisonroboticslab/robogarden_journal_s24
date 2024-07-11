@@ -1,6 +1,7 @@
 import time
 import numpy as np
 from dynamixel_python import DynamixelManager
+import pdb
 
 class MyRobot:
     """
@@ -40,6 +41,8 @@ class MyRobot:
     L5 = 148.4
     L6 = 54.4
     L7 = 160
+    shoulder_horiz_Offset = 18.71
+    shoulder_vert_Offset = 45
 
     def __init__(self):
         """
@@ -188,35 +191,41 @@ class MyRobot:
         else:
             return angle
     
-    def planner_ik(self, x, y):
+    def planner_ik(self, x, z):
         """
         Inverse kinematics to find the angles α0 and α1 based on end-effector position (x, y)
         :param x: X position of the end-effector
         :param y: Y position of the end-effector
         :return: Tuple of angles (α0, α1) in degrees
         """
-        print(f"Running planner_ik with end-effector position: ({x}, {y})")
+        print(f"Running planner_ik with end-effector position: ({x}, {z})")
+
+        # Getting the values of a and b
+
+        a = x - self.shoulder_horiz_Offset - self.L4 # a is the distannce from the servo center to the wrist joint
+
+        b = z - self.shoulder_vert_Offset # a is the vertical comp from the servo center to the wrist joint
 
         # Calculate hypotenuse r
-        r = np.sqrt(x**2 + y**2)
+        r = np.sqrt(a**2 + b**2)
         print(f"Hypotenuse (r): {r}")
 
         # Calculate angle phi using the alternate angle
-        phi = np.arctan2(y, x)
+        phi = np.arctan2(b, a)
         print(f"Phi: {np.degrees(phi)} degrees")
 
         # Calculate the angle between L5 and r using the law of cosines
         cos_angle_L5_r = (self.L5**2 + r**2 - self.L7**2) / (2 * self.L5 * r)
-        angle_L5_r = np.arccos(np.clip(cos_angle_L5_r, -1.0, 1.0))
+        angle_L5_r = np.arccos(cos_angle_L5_r) + phi
         print(f"Angle between L5 and r: {np.degrees(angle_L5_r)} degrees")
 
         # Calculate α0
-        alpha_0 = np.degrees(np.pi/2 - (angle_L5_r - phi))
+        alpha_0 = np.degrees(np.pi/2 - angle_L5_r)
         print(f"α0: {alpha_0} degrees")
 
         # Calculate the anglebetween L5 and L7 using the law of cosines
         cos_angle_L5_L7 = (self.L5**2 + self.L7**2 - r**2) / (2 * self.L5 * self.L7)
-        angle_L5_L7 = np.arccos(np.clip(cos_angle_L5_L7, -1.0, 1.0))
+        angle_L5_L7 = np.arccos(cos_angle_L5_L7)
         print(f"Angle between L5 and L7: {np.degrees(angle_L5_L7)} degrees")
 
         # Calculate the angle between L6 and L5
@@ -227,13 +236,22 @@ class MyRobot:
         Db = np.sqrt(self.L5**2 + self.L6**2 - 2 * self.L5 * self.L6 * np.cos(angle_L6_L5))
         print(f"Db: {Db}")
 
-        # Calculate β using the law of cosines
-        cos_beta = (self.L1**2 + self.L2**2 - Db**2) / (2 * self.L1 * self.L2)
-        beta = np.arccos(np.clip(cos_beta, -1.0, 1.0))
-        print(f"β: {np.degrees(beta)} degrees")
+        # Calculate q using the law of cosines
+        cos_q = (Db**2 + self.L5**2 - self.L6**2) / (2 * self.L5 * Db)
+        q = np.degrees(np.arccos(cos_q))
+        print(f"q: {np.degrees(q)} degrees")
+
+        # Calculate w using the law of cosines
+        cos_w = (Db**2 + self.L1**2 - self.L2**2) / (2 * self.L1 * Db)
+        w = np.degrees(np.arccos(cos_w))
+        print(f"w: {np.degrees(w)} degrees")
+
+        # Calculate v that is alpha0 - q  
+        v = alpha_0 - q
+        print(f"v: {v} degrees")
 
         # Calculate α1
-        alpha_1 = 90 - np.degrees(beta)
+        alpha_1 = w - v 
         print(f"α1: {alpha_1} degrees")
 
         return alpha_0, alpha_1
@@ -251,6 +269,8 @@ class MyRobot:
         base_angle = np.degrees(np.arctan2(y, x))
         print(f"Base angle: {base_angle} degrees")
 
+        return base_angle
+
 
 
 if __name__ == '__main__':
@@ -261,16 +281,18 @@ if __name__ == '__main__':
     time.sleep(2)  # Adjust the sleep time if needed
     
     # Define end-effector position
-    x, y = 200, 80
+    x, y, z = 397.61, -200, 100
     
     # Calculate angles using inverse kinematics
-    alpha_0, alpha_1 = robot.planner_ik(x, y)
+    alpha_0, alpha_1 = robot.planner_ik(x, z)
     print(f"Calculated angles: α0 = {alpha_0} degrees, α1 = {alpha_1} degrees")
+
+    base_angle = robot.base_ik(x, y)
     
     # Set joint angles based on calculated angles
     new_positions = {
-        'base': 0,
-        'shoulder': 0,
-        'elbow': 90
+        'base': base_angle,
+        'shoulder': alpha_1,
+        'elbow': alpha_0
     }
     robot.set_joint_angles(new_positions)

@@ -2,6 +2,7 @@ import time
 import numpy as np
 from dynamixel_python import DynamixelManager
 import pdb
+import serial
 
 class MyRobot:
     """
@@ -44,6 +45,10 @@ class MyRobot:
     shoulder_horiz_Offset = 18.71
     shoulder_vert_Offset = 45
 
+    # Define constants for rail movement direction
+    RIGHT = 0
+    LEFT = 1
+
     def __init__(self):
         """
         Set up and initialize motors according to MOTOR_LIST
@@ -65,6 +70,13 @@ class MyRobot:
         self.motors.init()
         if not self.motors.ping_all():
             raise BaseException("Motors aren't configured correctly")
+    # Initialize the Arduino serial connection
+        try:
+            self.arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)  # Update with the correct port
+            time.sleep(2)  # Wait for the serial connection to initialize
+        except serial.SerialException as e:
+            print(f"Error initializing Arduino connection: {e}")
+            self.arduino = None
 
     def test(self):
         """
@@ -271,6 +283,25 @@ class MyRobot:
 
         return base_angle
 
+    def move_rail(self, y):
+        """
+        Move the rail based on the y coordinate.
+        :param y: Y position of the end-effector
+        """
+        if y > 100:
+            distance = y - 100  # Calculate the distance to move
+            direction = self.RIGHT
+
+        elif y < 100:
+            distance = 100 - y  # Calculate the distance to move
+            direction = self.LEFT
+        else:
+            distance = 100 - y
+            direction = RIGHT
+        
+        command = f"MOVE{direction}{distance}\n"
+        self.arduino.write(command.encode())
+        print(f"Moving rail: {command}")
 
 
 if __name__ == '__main__':
@@ -281,13 +312,15 @@ if __name__ == '__main__':
     time.sleep(2)  # Adjust the sleep time if needed
     
     # Define end-effector position
-    x, y, z = 397.61, -200, 100
+    x, y, z = 397.61, , 100
     
     # Calculate angles using inverse kinematics
     alpha_0, alpha_1 = robot.planner_ik(x, z)
     print(f"Calculated angles: α0 = {alpha_0} degrees, α1 = {alpha_1} degrees")
 
     base_angle = robot.base_ik(x, y)
+
+    robot.move_rail(y)
     
     # Set joint angles based on calculated angles
     new_positions = {

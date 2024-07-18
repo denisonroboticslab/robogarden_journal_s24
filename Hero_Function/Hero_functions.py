@@ -49,6 +49,11 @@ class MyRobot:
     RIGHT = 0
     LEFT = 1
 
+    # Define Curr Y 
+
+    y_origin  = 0 # current location of the base 
+    y_threshhold = 100
+
     def __init__(self):
         """
         Set up and initialize motors according to MOTOR_LIST
@@ -203,7 +208,7 @@ class MyRobot:
         else:
             return angle
     
-    def planner_ik(self, x, z):
+    def planner_ik(self, x, y, z):
         """
         Inverse kinematics to find the angles α0 and α1 based on end-effector position (x, y)
         :param x: X position of the end-effector
@@ -214,7 +219,7 @@ class MyRobot:
 
         # Getting the values of a and b
 
-        a = x - self.shoulder_horiz_Offset - self.L4 # a is the distannce from the servo center to the wrist joint
+        a = np. - self.shoulder_horiz_Offset - self.L4 # a is the distannce from the servo center to the wrist joint
 
         b = z - self.shoulder_vert_Offset # a is the vertical comp from the servo center to the wrist joint
 
@@ -283,26 +288,24 @@ class MyRobot:
 
         return base_angle
 
-    def move_rail(self, y):
+    def move_rail(self, y_target):
         """
         Move the rail based on the y coordinate.
         :param y: Y position of the end-effector
         """
-        if y > 100:
-            distance = y - 100  # Calculate the distance to move
-            direction = self.RIGHT
-
-        elif y < 100:
-            distance = 100 - y  # Calculate the distance to move
-            direction = self.LEFT
-        else:
-            distance = 100 - y
-            direction = RIGHT
-        
-        command = f"MOVE{direction}{distance}\n"
-        self.arduino.write(command.encode())
-        print(f"Moving rail: {command}")
-
+        if (y_target > self.y_origin  = self.y_threshhold)  or (y_target < self.y_origin - self.y_threshhold): # if this is true movw the rail 
+            distance = y_target - seld.y_origin
+            if distance > 0:
+                direction = self.RIGHT
+            else:
+                 direction = self.LEFT
+            direction = np.abs(distance)
+            command = f"MOVE{direction}{distance}\n"
+            self.arduino.write(command.encode())
+            print(f"Moving rail: {command}")
+            # UPDATING ORIGIN 
+            self.y_origin = y_target
+    
 
 if __name__ == '__main__':
     robot = MyRobot()
@@ -313,14 +316,15 @@ if __name__ == '__main__':
     
     # Define end-effector position
     x, y, z = 200, -80, 100
+
+    robot.move_rail(y)
     
     # Calculate angles using inverse kinematics
     alpha_0, alpha_1 = robot.planner_ik(x, z)
     print(f"Calculated angles: α0 = {alpha_0} degrees, α1 = {alpha_1} degrees")
-
     base_angle = robot.base_ik(x, y)
 
-    #robot.move_rail(y)
+    
     
     # Set joint angles based on calculated angles
     new_positions = {

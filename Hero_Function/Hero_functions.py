@@ -312,7 +312,7 @@ if __name__ == '__main__':
     time.sleep(2)  # Adjust the sleep time if needed
     
     # Define end-effector position
-    x, y, z = 397.61, , 100
+    x, y, z = 200, 80, 100
     
     # Calculate angles using inverse kinematics
     alpha_0, alpha_1 = robot.planner_ik(x, z)
@@ -320,7 +320,7 @@ if __name__ == '__main__':
 
     base_angle = robot.base_ik(x, y)
 
-    robot.move_rail(y)
+    #robot.move_rail(y)
     
     # Set joint angles based on calculated angles
     new_positions = {

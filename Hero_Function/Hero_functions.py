@@ -294,7 +294,7 @@ class MyRobot:
         :param y: Y position of the end-effector
         """
         if (y_target > self.y_origin  = self.y_threshhold)  or (y_target < self.y_origin - self.y_threshhold): # if this is true movw the rail 
-            distance = y_target - seld.y_origin
+            distance = y_target - self.y_origin
             if distance > 0:
                 direction = self.RIGHT
             else:

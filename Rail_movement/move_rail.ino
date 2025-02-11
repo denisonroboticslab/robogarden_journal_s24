@@ -1,5 +1,5 @@
 #define PULSE 3 // defining pulse pin 
-#define DIR 5 // defining direction pin 
+#define DIR 13 // defining direction pin 
 #define RIGHT 0 // defining directions
 #define LEFT 1 // defining directions 
 uint32_t stepcount; // long integer to count the steps moved 

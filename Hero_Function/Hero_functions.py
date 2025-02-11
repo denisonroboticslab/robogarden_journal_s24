@@ -46,8 +46,8 @@ class MyRobot:
     shoulder_vert_Offset = 45
 
     # Define constants for rail movement direction
-    RIGHT = 0
-    LEFT = 1
+    #RIGHT = 0
+    #LEFT = 1
 
     # Define Curr Y 
 
@@ -67,18 +67,23 @@ class MyRobot:
             'elbow': 4000,
             'shoulder': 2500,
         }
-
+        print("Initiating Dynamixels")
         self.motors = DynamixelManager(self.USB_PORT, baud_rate=self.BAUD_RATE)
         for dxl_name, dxl_id, dxl_model in self.motor_list:
+            print(f"Adding {dxl_name}: {dxl_id}")
             self.motors.add_dynamixel(dxl_name, dxl_id, dxl_model)
-
+            print(f"Added successfully")
+        print("calling init")
         self.motors.init()
+        print("init successfully")
         if not self.motors.ping_all():
             raise BaseException("Motors aren't configured correctly")
     # Initialize the Arduino serial connection
         try:
+            print("Trying to connect Arduino")
             self.arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)  # Update with the correct port
             time.sleep(2)  # Wait for the serial connection to initialize
+            print("Succesfully conneced")
         except serial.SerialException as e:
             print(f"Error initializing Arduino connection: {e}")
             self.arduino = None
@@ -219,7 +224,7 @@ class MyRobot:
 
         # Getting the values of a and b
 
-        a = np. - self.shoulder_horiz_Offset - self.L4 # a is the distannce from the servo center to the wrist joint
+        a = np.sqrt(x**2 + y**2) - self.shoulder_horiz_Offset - self.L4 # a is the distannce from the servo center to the wrist joint
 
         b = z - self.shoulder_vert_Offset # a is the vertical comp from the servo center to the wrist joint
 
@@ -305,9 +310,9 @@ class MyRobot:
             print(f"Moving rail: {command}")
             # UPDATING ORIGIN 
             self.y_origin = y_target
-    
 
 if __name__ == '__main__':
+    print("initiating robot")
     robot = MyRobot()
     robot.test()
     time.sleep(2)  # Adjust the sleep time if needed
@@ -315,12 +320,12 @@ if __name__ == '__main__':
     time.sleep(2)  # Adjust the sleep time if needed
     
     # Define end-effector position
-    x, y, z = 200, -80, 100
+    x, y, z = 400, 90, 100
 
     robot.move_rail(y)
     
     # Calculate angles using inverse kinematics
-    alpha_0, alpha_1 = robot.planner_ik(x, z)
+    alpha_0, alpha_1 = robot.planner_ik(x, y - robot.y_origin, z)
     print(f"Calculated angles: α0 = {alpha_0} degrees, α1 = {alpha_1} degrees")
     base_angle = robot.base_ik(x, y)
 
